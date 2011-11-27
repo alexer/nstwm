@@ -11,16 +11,19 @@ from Xlib.display import Display
 from Xlib import X, XK
 
 dpy = Display()
+root = dpy.screen().root
+
+event_mask = X.ButtonPressMask|X.ButtonReleaseMask|X.PointerMotionMask
 
 # Grab the alt+F1 key combination on the root window, which means it'll only be reported to us
-dpy.screen().root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")), X.Mod1Mask, 1,
-        X.GrabModeAsync, X.GrabModeAsync)
+root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
+    X.Mod1Mask, 1, X.GrabModeAsync, X.GrabModeAsync)
 # Grab alt+left-click and alt+right-click, respectively. We ask to receive notifications when
 # either combination is pressed or released, and when the mouse is moved while a button is kept pressed.
-dpy.screen().root.grab_button(1, X.Mod1Mask, 1, X.ButtonPressMask|X.ButtonReleaseMask|X.PointerMotionMask,
-        X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE)
-dpy.screen().root.grab_button(3, X.Mod1Mask, 1, X.ButtonPressMask|X.ButtonReleaseMask|X.PointerMotionMask,
-        X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE)
+root.grab_button(1, X.Mod1Mask, 1, event_mask,
+    X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE)
+root.grab_button(3, X.Mod1Mask, 1, event_mask,
+    X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE)
 
 start = None
 while 1:
@@ -52,11 +55,16 @@ while 1:
         xdiff = ev.root_x - start.root_x
         ydiff = ev.root_y - start.root_y
         # Move or resize the window depending on which button was pressed.
-        start.child.configure(
-            x = attr.x + (start.detail == 1 and xdiff or 0),
-            y = attr.y + (start.detail == 1 and ydiff or 0),
-            width = max(1, attr.width + (start.detail == 3 and xdiff or 0)),
-            height = max(1, attr.height + (start.detail == 3 and ydiff or 0)))
+        if start.detail == 1:
+            start.child.configure(
+                x = attr.x + xdiff,
+                y = attr.y + ydiff
+            )
+        elif start.detail == 3:
+            start.child.configure(
+                width = max(1, attr.width + xdiff),
+                height = max(1, attr.height + ydiff)
+            )
     # We got a mouse button release, stop dragging.
     elif ev.type == X.ButtonRelease:
         start = None

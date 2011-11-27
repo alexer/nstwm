@@ -27,7 +27,9 @@ int main(void)
     XEvent ev;
 
     /* return failure status if we can't connect */
-    if(!(dpy = XOpenDisplay(0x0))) return 1;
+    if(!(dpy = XOpenDisplay(0x0))) {
+        return 1;
+    }
 
     /* we use DefaultRootWindow to get the root window, which is a somewhat
      * naive approach that will only work on the default screen.  most people
@@ -60,7 +62,7 @@ int main(void)
      * differ between systems.
      */
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
-            DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+        DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 
     /* XGrabKey and XGrabButton are basically ways of saying "when this
      * combination of modifiers and key/button is pressed, send me the events."
@@ -71,13 +73,12 @@ int main(void)
      * of those types and filter them as you receive them.
      */
     XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+        ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+        ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 
     start.subwindow = None;
-    for(;;)
-    {
+    for(;;) {
         /* this is the most basic way of looping through X events; you can be
          * more flexible by using XPending(), or ConnectionNumber() along with
          * select() (or poll() or whatever floats your boat).
@@ -96,10 +97,9 @@ int main(void)
          * None, that means that the window the event happened in was the same
          * window that was grabbed on -- in this case, the root window.
          */
-        if(ev.type == KeyPress && ev.xkey.subwindow != None)
+        if(ev.type == KeyPress && ev.xkey.subwindow != None) {
             XRaiseWindow(dpy, ev.xkey.subwindow);
-        else if(ev.type == ButtonPress && ev.xbutton.subwindow != None)
-        {
+        } else if(ev.type == ButtonPress && ev.xbutton.subwindow != None) {
             /* we "remember" the position of the pointer at the beginning of
              * our move/resize, and the size/position of the window.  that way,
              * when the pointer moves, we can compare it to our initial data
@@ -107,11 +107,9 @@ int main(void)
              */
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
-        }
         /* we only get motion events when a button is being pressed,
          * but we still have to check that the drag started on a window */
-        else if(ev.type == MotionNotify && start.subwindow != None)
-        {
+        } else if(ev.type == MotionNotify && start.subwindow != None) {
             /* here we could "compress" motion notify events by doing:
              *
              * while(XCheckTypedEvent(dpy, MotionNotify, &ev));
@@ -147,14 +145,18 @@ int main(void)
              */
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
-            XMoveResizeWindow(dpy, start.subwindow,
-                attr.x + (start.button==1 ? xdiff : 0),
-                attr.y + (start.button==1 ? ydiff : 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
-        }
-        else if(ev.type == ButtonRelease)
-        {
+            if(start.button == 1) {
+                XMoveWindow(dpy, start.subwindow,
+                    attr.x + xdiff,
+                    attr.y + ydiff
+                );
+            } else if(start.button == 3) {
+                XResizeWindow(dpy, start.subwindow,
+                    MAX(1, attr.width + xdiff),
+                    MAX(1, attr.height + ydiff)
+                );
+            }
+        } else if(ev.type == ButtonRelease) {
             start.subwindow = None;
         }
     }
