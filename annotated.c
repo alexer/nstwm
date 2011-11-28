@@ -22,7 +22,7 @@ void decorate(Display *dpy, Window win)
     Window frame;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
-    values.event_mask = ButtonPressMask|ButtonReleaseMask;
+    values.event_mask = ButtonPressMask;
 
     changes.sibling = win;
     changes.stack_mode = Above;
@@ -155,8 +155,12 @@ int main(void)
         if(ev.type == KeyPress && ev.xkey.subwindow != None) {
             XRaiseWindow(dpy, ev.xkey.subwindow);
         } else if(ev.type == ButtonPress) {
-            /* ask for motion events so we can track the drag */
-            XGrabPointer(dpy, ev.xbutton.window, 1, PointerMotionMask,
+            /* ask for motion events so we can track the drag. We ask for
+             * button release events here instead of in the frame event mask
+             * since otherwise we miss the button release if the cursor is
+             * outside the window.
+             */
+            XGrabPointer(dpy, ev.xbutton.window, 1, PointerMotionMask|ButtonReleaseMask,
                 GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
             /* we "remember" the position of the pointer at the beginning of
              * our move/resize, and the size/position of the window.  that way,

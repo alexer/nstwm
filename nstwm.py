@@ -12,7 +12,7 @@ def decorate(win):
     win.configure(border_width = 0)
     geom = win.get_geometry()
     frame = root.create_window(geom.x - 5, geom.y - 25, geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.ButtonReleaseMask)
+        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask)
     frame.configure(sibling = win, stack_mode = X.Above)
     win.reparent(frame, 5, 25)
     frame.map()
@@ -35,7 +35,7 @@ while 1:
     if ev.type == X.KeyPress and ev.child != X.NONE:
         ev.child.configure(stack_mode = X.Above)
     elif ev.type == X.ButtonPress:
-        ev.window.grab_pointer(1, X.PointerMotionMask,
+        ev.window.grab_pointer(1, X.PointerMotionMask|X.ButtonReleaseMask,
             X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE, X.CurrentTime)
         attr = ev.window.get_geometry()
         start = ev

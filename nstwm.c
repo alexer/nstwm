@@ -15,7 +15,7 @@ void decorate(Display *dpy, Window win)
     Window frame;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
-    values.event_mask = ButtonPressMask|ButtonReleaseMask;
+    values.event_mask = ButtonPressMask;
 
     changes.sibling = win;
     changes.stack_mode = Above;
@@ -63,7 +63,7 @@ int main(void)
         if(ev.type == KeyPress && ev.xkey.subwindow != None) {
             XRaiseWindow(dpy, ev.xkey.subwindow);
         } else if(ev.type == ButtonPress) {
-            XGrabPointer(dpy, ev.xbutton.window, 1, PointerMotionMask,
+            XGrabPointer(dpy, ev.xbutton.window, 1, PointerMotionMask|ButtonReleaseMask,
                 GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
             XGetWindowAttributes(dpy, ev.xbutton.window, &attr);
             start = ev.xbutton;

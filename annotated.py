@@ -26,7 +26,7 @@ def decorate(win):
     # We set the event mask for the window so that we get clicks only from the frame,
     # clicks to the window still go to the application as they're supposed to.
     frame = root.create_window(geom.x - 5, geom.y - 25, geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.ButtonReleaseMask)
+        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask)
     # Make sure window is over the frame. XXX: Is this really needed?
     frame.configure(sibling = win, stack_mode = X.Above)
     # Reparent the window to our decorations, take borders and top bar into account for the position.
@@ -75,8 +75,10 @@ while 1:
     # We got a mouse button press, start dragging. We only get clicks from frames
     # of windows we have decorated.
     elif ev.type == X.ButtonPress:
-        # Ask for motion events so we can track the drag
-        ev.window.grab_pointer(1, X.PointerMotionMask,
+        # Ask for motion events so we can track the drag. We ask for button
+        # release events here instead of in the frame event mask since otherwise
+        # we miss the button release if the cursor is outside the window.
+        ev.window.grab_pointer(1, X.PointerMotionMask|X.ButtonReleaseMask,
             X.GrabModeAsync, X.GrabModeAsync, X.NONE, X.NONE, X.CurrentTime)
         # Save the original position and size of the window
         attr = ev.window.get_geometry()
