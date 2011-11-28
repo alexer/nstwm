@@ -4,15 +4,18 @@
  * This software is in the public domain and is provided AS IS, with NO WARRANTY. */
 
 #include <X11/Xlib.h>
+#include "util.h"
+#include <stdlib.h>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-void decorate(Display *dpy, Window win)
+void decorate(Display *dpy, XAssocTable *windows, Window win)
 {
     XWindowAttributes attr;
     XSetWindowAttributes values;
     XWindowChanges changes;
     Window frame;
+    Window *data;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
     values.event_mask = ButtonPressMask;
@@ -28,6 +31,10 @@ void decorate(Display *dpy, Window win)
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
     XReparentWindow(dpy, win, frame, 5, 25);
     XMapWindow(dpy, frame);
+
+    data = (Window *)malloc(sizeof(Window));
+    *data = win;
+    XMakeAssoc(dpy, windows, frame, (char *)data);
 }
 
 int main(void)
@@ -36,10 +43,11 @@ int main(void)
     XWindowAttributes attr;
     XButtonEvent start;
     XEvent ev;
-    int xdiff, ydiff;
+    int xdiff, ydiff, width, height;
     Window junkwin;
     Window *children;
     unsigned int num_children, i;
+    XAssocTable *windows;
 
     if(!(dpy = XOpenDisplay(0x0))) {
         return 1;
@@ -48,13 +56,15 @@ int main(void)
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
         DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 
+    windows = XCreateAssocTable(32);
+
     XQueryTree(dpy, DefaultRootWindow(dpy), &junkwin, &junkwin, &children, &num_children);
     for(i = 0; i < num_children; i++) {
         XGetWindowAttributes(dpy, children[i], &attr);
         if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
             continue;
         }
-        decorate(dpy, children[i]);
+        decorate(dpy, windows, children[i]);
     }
     XFree(children);
 
@@ -77,14 +87,16 @@ int main(void)
                     attr.y + ydiff
                 );
             } else if(start.button == 3) {
-                XResizeWindow(dpy, start.window,
-                    MAX(1, attr.width + xdiff),
-                    MAX(1, attr.height + ydiff)
-                );
+                width = MAX(11, attr.width + xdiff);
+                height = MAX(31, attr.height + ydiff);
+                junkwin = *(Window *)XLookUpAssoc(dpy, windows, start.window);
+                XResizeWindow(dpy, start.window, width, height);
+                XResizeWindow(dpy, junkwin, width - 10, height - 30);
             }
         } else if(ev.type == ButtonRelease) {
             XUngrabPointer(dpy, CurrentTime);
         }
     }
+    XDestroyAssocTable(windows);
 }
 

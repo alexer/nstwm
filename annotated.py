@@ -11,6 +11,7 @@ from Xlib.display import Display
 from Xlib import X, XK
 from util import *
 
+windows = {}
 def decorate(win):
     # Normally windows are destroyed if their parent is destroyed.
     # Since we reparent windows to out decorations, they would normally be destroyed when the window manager dies.
@@ -33,6 +34,8 @@ def decorate(win):
     win.reparent(frame, 5, 25)
     # Make our frame (and the window) visible.
     frame.map()
+    # Keep track which frame contains which window
+    windows[frame.id] = win
 
 dpy = Display()
 scr = dpy.screen()
@@ -104,10 +107,12 @@ while 1:
                 y = attr.y + ydiff
             )
         elif start.detail == 3:
-            start.window.configure(
-                width = max(1, attr.width + xdiff),
-                height = max(1, attr.height + ydiff)
-            )
+            # Do not resize frame or window below 1 pixel width or height
+            width, height = max(11, attr.width + xdiff), max(31, attr.height + ydiff)
+            # Resize frame
+            start.window.configure(width = width, height = height)
+            # Resize window
+            windows[start.window.id].configure(width = width - 10, height = height - 30)
     # We got a mouse button release, stop dragging.
     elif ev.type == X.ButtonRelease:
         # Stop receiving motion events

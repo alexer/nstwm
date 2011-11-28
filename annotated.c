@@ -11,15 +11,18 @@
  * headers, like Xmd.h, keysym.h, etc.
  */
 #include <X11/Xlib.h>
+#include "util.h"
+#include <stdlib.h>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-void decorate(Display *dpy, Window win)
+void decorate(Display *dpy, XAssocTable *windows, Window win)
 {
     XWindowAttributes attr;
     XSetWindowAttributes values;
     XWindowChanges changes;
     Window frame;
+    Window *data;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
     values.event_mask = ButtonPressMask;
@@ -54,6 +57,11 @@ void decorate(Display *dpy, Window win)
     XReparentWindow(dpy, win, frame, 5, 25);
     /* make our frame (and the window) visible. */
     XMapWindow(dpy, frame);
+
+    /* keep track which frame contains which window */
+    data = (Window *)malloc(sizeof(Window));
+    *data = win;
+    XMakeAssoc(dpy, windows, frame, (char *)data);
 }
 
 int main(void)
@@ -67,10 +75,11 @@ int main(void)
     XButtonEvent start;
 
     XEvent ev;
-    int xdiff, ydiff;
+    int xdiff, ydiff, width, height;
     Window junkwin;
     Window *children;
     unsigned int num_children, i;
+    XAssocTable *windows;
 
     /* return failure status if we can't connect */
     if(!(dpy = XOpenDisplay(0x0))) {
@@ -110,6 +119,9 @@ int main(void)
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
         DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 
+    /* initialize hashtable for keeping track of windows */
+    windows = XCreateAssocTable(32);
+
     /* in the next loop, we add decorations to existing windows */
 
     /* get all children of the root window */
@@ -129,7 +141,7 @@ int main(void)
             continue;
         }
         /* the window seems sane, add decorations to it */
-        decorate(dpy, children[i]);
+        decorate(dpy, windows, children[i]);
     }
     XFree(children);
 
@@ -216,15 +228,21 @@ int main(void)
                     attr.y + ydiff
                 );
             } else if(start.button == 3) {
-                XResizeWindow(dpy, start.window,
-                    MAX(1, attr.width + xdiff),
-                    MAX(1, attr.height + ydiff)
-                );
+                /* do not resize frame or window below 1 pixel width or height */
+                width = MAX(11, attr.width + xdiff);
+                height = MAX(31, attr.height + ydiff);
+                /* find out which window is associated with this frame */
+                junkwin = *(Window *)XLookUpAssoc(dpy, windows, start.window);
+                /* resize frame */
+                XResizeWindow(dpy, start.window, width, height);
+                /* resize window */
+                XResizeWindow(dpy, junkwin, width - 10, height - 30);
             }
         } else if(ev.type == ButtonRelease) {
             /* stop receiving motion events */
             XUngrabPointer(dpy, CurrentTime);
         }
     }
+    XDestroyAssocTable(windows);
 }
 

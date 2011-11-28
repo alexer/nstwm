@@ -7,6 +7,7 @@ from Xlib.display import Display
 from Xlib import X, XK
 from util import *
 
+windows = {}
 def decorate(win):
     win.change_save_set(X.SetModeInsert)
     win.configure(border_width = 0)
@@ -16,6 +17,7 @@ def decorate(win):
     frame.configure(sibling = win, stack_mode = X.Above)
     win.reparent(frame, 5, 25)
     frame.map()
+    windows[frame.id] = win
 
 dpy = Display()
 scr = dpy.screen()
@@ -49,10 +51,9 @@ while 1:
                 y = attr.y + ydiff
             )
         elif start.detail == 3:
-            start.window.configure(
-                width = max(1, attr.width + xdiff),
-                height = max(1, attr.height + ydiff)
-            )
+            width, height = max(11, attr.width + xdiff), max(31, attr.height + ydiff)
+            start.window.configure(width = width, height = height)
+            windows[start.window.id].configure(width = width - 10, height = height - 30)
     elif ev.type == X.ButtonRelease:
         dpy.ungrab_pointer(X.CurrentTime)
 
