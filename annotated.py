@@ -24,10 +24,12 @@ def decorate(win):
     geom = win.get_geometry()
     # Create the window, 5px borders plus a 20px bar at the top.
     # Setting the background pixel means we don't have to do any drawing and stuff ourselves.
-    # We set the event mask for the window so that we get clicks only from the frame,
+    # We set ButtonPressMask in the event mask for the window so that we get clicks only from the frame,
     # clicks to the window still go to the application as they're supposed to.
+    # We set SubstructureNotifyMask so that we're notified when the contained window is destroyed,
+    # so that we know when to clean up.
     frame = root.create_window(geom.x - 5, geom.y - 25, geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask)
+        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
     # Make sure window is over the frame. XXX: Is this really needed?
     frame.configure(sibling = win, stack_mode = X.Above)
     # Reparent the window to our decorations, take borders and top bar into account for the position.
@@ -117,4 +119,9 @@ while 1:
     elif ev.type == X.ButtonRelease:
         # Stop receiving motion events
         dpy.ungrab_pointer(X.CurrentTime)
+    # A decorated window was destroyed, destroy the decoration too
+    elif ev.type == X.DestroyNotify:
+        # With DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask
+        del windows[ev.event.id]
+        ev.event.destroy()
 

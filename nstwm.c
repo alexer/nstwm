@@ -18,7 +18,7 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     Window *data;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
-    values.event_mask = ButtonPressMask;
+    values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
     changes.sibling = win;
     changes.stack_mode = Above;
@@ -95,6 +95,9 @@ int main(void)
             }
         } else if(ev.type == ButtonRelease) {
             XUngrabPointer(dpy, CurrentTime);
+        } else if(ev.type == DestroyNotify) {
+            XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
+            XDestroyWindow(dpy, ev.xdestroywindow.event);
         }
     }
     XDestroyAssocTable(windows);

@@ -13,7 +13,7 @@ def decorate(win):
     win.configure(border_width = 0)
     geom = win.get_geometry()
     frame = root.create_window(geom.x - 5, geom.y - 25, geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask)
+        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
     frame.configure(sibling = win, stack_mode = X.Above)
     win.reparent(frame, 5, 25)
     frame.map()
@@ -56,4 +56,7 @@ while 1:
             windows[start.window.id].configure(width = width - 10, height = height - 30)
     elif ev.type == X.ButtonRelease:
         dpy.ungrab_pointer(X.CurrentTime)
+    elif ev.type == X.DestroyNotify:
+        del windows[ev.event.id]
+        ev.event.destroy()
 

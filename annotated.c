@@ -25,7 +25,7 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     Window *data;
 
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
-    values.event_mask = ButtonPressMask;
+    values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
     changes.sibling = win;
     changes.stack_mode = Above;
@@ -44,8 +44,10 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XGetWindowAttributes(dpy, win, &attr);
     /* create the window, 5px borders plus a 20px bar at the top. setting the
      * background pixel means we don't have to do any drawing and stuff ourselves.
-     * we set the event mask for the window so that we get clicks only from the
+     * we set ButtonPressMask in the event mask for the window so that we get clicks only from the
      * frame, clicks to the window still go to the application as they're supposed to.
+     * we set SubstructureNotifyMask so that we're notified when the contained
+     * window is destroyed, so that we know when to clean up.
      */
     frame = XCreateWindow(dpy, DefaultRootWindow(dpy), attr.x - 5, attr.y - 25, attr.width + 10, attr.height + 30,
         0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
@@ -241,6 +243,11 @@ int main(void)
         } else if(ev.type == ButtonRelease) {
             /* stop receiving motion events */
             XUngrabPointer(dpy, CurrentTime);
+        /* a decorated window was destroyed, destroy the decoration too */
+        } else if(ev.type == DestroyNotify) {
+            /* with DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask */
+            XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
+            XDestroyWindow(dpy, ev.xdestroywindow.event);
         }
     }
     XDestroyAssocTable(windows);
