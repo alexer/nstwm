@@ -37,12 +37,15 @@ def decorate(win):
     # Make our frame (and the window) visible.
     frame.map()
     # Keep track which frame contains which window
-    windows[frame.id] = win
+    windows[frame] = windows[win] = (frame, win)
 
 dpy = Display()
 scr = dpy.screen()
 root = scr.root
 
+# We set SubstructureNotifyMask on the root window so that we're notified when top-level windows are mapped,
+# so that we can decorate them if they're undecorated.
+root.change_attributes(event_mask = X.SubstructureNotifyMask)
 # Grab the alt+F1 key combination on the root window, which means it'll only be reported to us
 root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
     X.Mod1Mask, 1, X.GrabModeAsync, X.GrabModeAsync)
@@ -51,8 +54,11 @@ root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
 for win in root.query_tree().children:
     attr = win.get_attributes()
     # Skip adding decorations to this window if it's override_redirect or unmapped.
-    # XXX: Why these two conditions, I have no idea. Every window manager seems
-    # to use something along these lines. Somebody please explain. :(
+    # We ignore unmapped windows, since programs seem to use lots of windows that
+    # are never mapped during their lifetime. So why bother? Just decorate them
+    # if/when they're mapped.
+    # XXX: Why windows with override_redirect are skipped, I have no idea. Every
+    # window manager seems to do it. Somebody please explain. :(
     # Apparently, override_redirect is meant for "temporary pop-up windows that
     # should not be reparented or affected by the window manager's layout policy",
     # whatever that means. Something tells me I have never seen such a window, ever..
@@ -114,14 +120,29 @@ while 1:
             # Resize frame
             start.window.configure(width = width, height = height)
             # Resize window
-            windows[start.window.id].configure(width = width - 10, height = height - 30)
+            windows[start.window][1].configure(width = width - 10, height = height - 30)
     # We got a mouse button release, stop dragging.
     elif ev.type == X.ButtonRelease:
         # Stop receiving motion events
         dpy.ungrab_pointer(X.CurrentTime)
-    # A decorated window was destroyed, destroy the decoration too
+    # Since we have asked for SubstructureNotify events for the root window and all
+    # our decorations, we have to do a little checking in those events.
+    # We can ignore any events on our decorations, since we're the ones who caused
+    # them in the first place.
+
+    # A window was mapped
+    elif ev.type == X.MapNotify:
+        frame, win = windows.get(ev.window, (None, None))
+        # We don't know this window yet, so it's a top-level window being mapped
+        # for the first time.
+        if frame is None:
+            decorate(ev.window)
+    # A window was destroyed
     elif ev.type == X.DestroyNotify:
-        # With DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask
-        del windows[ev.event.id]
-        ev.event.destroy()
+        frame, win = windows.get(ev.window, (None, None))
+        # It's a decorated window, destroy the decorations too
+        if ev.window == win:
+            del windows[frame]
+            del windows[win]
+            frame.destroy()
 

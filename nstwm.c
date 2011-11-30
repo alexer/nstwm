@@ -32,14 +32,17 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XReparentWindow(dpy, win, frame, 5, 25);
     XMapWindow(dpy, frame);
 
-    data = (Window *)malloc(sizeof(Window));
-    *data = win;
+    data = (Window *)malloc(2 * sizeof(Window));
+    data[0] = frame;
+    data[1] = win;
     XMakeAssoc(dpy, windows, frame, (char *)data);
+    XMakeAssoc(dpy, windows, win, (char *)data);
 }
 
 int main(void)
 {
     Display * dpy;
+    XSetWindowAttributes winattrs;
     XWindowAttributes attr;
     XButtonEvent start;
     XEvent ev;
@@ -52,6 +55,9 @@ int main(void)
     if(!(dpy = XOpenDisplay(0x0))) {
         return 1;
     }
+
+    winattrs.event_mask = SubstructureNotifyMask;
+    XChangeWindowAttributes(dpy, DefaultRootWindow(dpy), CWEventMask, &winattrs);
 
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
         DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
@@ -89,16 +95,25 @@ int main(void)
             } else if(start.button == 3) {
                 width = MAX(11, attr.width + xdiff);
                 height = MAX(31, attr.height + ydiff);
-                junkwin = *(Window *)XLookUpAssoc(dpy, windows, start.window);
+                children = (Window *)XLookUpAssoc(dpy, windows, start.window);
                 XResizeWindow(dpy, start.window, width, height);
-                XResizeWindow(dpy, junkwin, width - 10, height - 30);
+                XResizeWindow(dpy, children[1], width - 10, height - 30);
             }
         } else if(ev.type == ButtonRelease) {
             XUngrabPointer(dpy, CurrentTime);
+        } else if(ev.type == MapNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
+            if(children == NULL) {
+                decorate(dpy, windows, ev.xmap.window);
+            }
         } else if(ev.type == DestroyNotify) {
-            free(XLookUpAssoc(dpy, windows, ev.xdestroywindow.event));
-            XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
-            XDestroyWindow(dpy, ev.xdestroywindow.event);
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xdestroywindow.window);
+            if(children != NULL && ev.xdestroywindow.window == children[1]) {
+                XDeleteAssoc(dpy, windows, children[0]);
+                XDeleteAssoc(dpy, windows, children[1]);
+                XDestroyWindow(dpy, children[0]);
+                free(children);
+            }
         }
     }
     XDestroyAssocTable(windows);

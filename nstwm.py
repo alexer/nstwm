@@ -17,12 +17,13 @@ def decorate(win):
     frame.configure(sibling = win, stack_mode = X.Above)
     win.reparent(frame, 5, 25)
     frame.map()
-    windows[frame.id] = win
+    windows[frame] = windows[win] = (frame, win)
 
 dpy = Display()
 scr = dpy.screen()
 root = scr.root
 
+root.change_attributes(event_mask = X.SubstructureNotifyMask)
 root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
     X.Mod1Mask, 1, X.GrabModeAsync, X.GrabModeAsync)
 
@@ -53,10 +54,17 @@ while 1:
         elif start.detail == 3:
             width, height = max(11, attr.width + xdiff), max(31, attr.height + ydiff)
             start.window.configure(width = width, height = height)
-            windows[start.window.id].configure(width = width - 10, height = height - 30)
+            windows[start.window][1].configure(width = width - 10, height = height - 30)
     elif ev.type == X.ButtonRelease:
         dpy.ungrab_pointer(X.CurrentTime)
+    elif ev.type == X.MapNotify:
+        frame, win = windows.get(ev.window, (None, None))
+        if frame is None:
+            decorate(ev.window)
     elif ev.type == X.DestroyNotify:
-        del windows[ev.event.id]
-        ev.event.destroy()
+        frame, win = windows.get(ev.window, (None, None))
+        if ev.window == win:
+            del windows[frame]
+            del windows[win]
+            frame.destroy()
 

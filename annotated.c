@@ -61,14 +61,19 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XMapWindow(dpy, frame);
 
     /* keep track which frame contains which window */
-    data = (Window *)malloc(sizeof(Window));
-    *data = win;
+    /* allocate and initialize association data */
+    data = (Window *)malloc(2 * sizeof(Window));
+    data[0] = frame;
+    data[1] = win;
+    /* create associations */
     XMakeAssoc(dpy, windows, frame, (char *)data);
+    XMakeAssoc(dpy, windows, win, (char *)data);
 }
 
 int main(void)
 {
     Display * dpy;
+    XSetWindowAttributes winattrs;
     XWindowAttributes attr;
 
     /* we use this to save the pointer's state at the beginning of the
@@ -103,6 +108,13 @@ int main(void)
      * whatever they specify "foo" as.
      */
 
+    /* we set SubstructureNotifyMask on the root window so that we're notified
+     * when top-level windows are mapped, so that we can decorate them if
+     * they're undecorated.
+     */
+    winattrs.event_mask = SubstructureNotifyMask;
+    XChangeWindowAttributes(dpy, DefaultRootWindow(dpy), CWEventMask, &winattrs);
+
     /* you could also include keysym.h and use the XK_F1 constant instead of
      * the call to XStringToKeysym, but this method is more "dynamic."  imagine
      * you have config files which specify key bindings.  instead of parsing
@@ -131,8 +143,11 @@ int main(void)
     for(i = 0; i < num_children; i++) {
         /* skip adding decorations to this window if it's override_redirect
          * or unmapped.
-         * XXX: why these two conditions, i have no idea. every window manager
-         * seems to use something along these lines. somebodyplease explain. :(
+         * We ignore unmapped windows, since programs seem to use lots of
+         * windows that are never mapped during their lifetime. So why bother?
+         * Just decorate them if/when they're mapped.
+         * XXX: why windows with override_redirect are skipped, I have no idea.
+         * every window manager seems to do it. somebody please explain. :(
          * apparently, override_redirect is meant for "temporary pop-up windows
          * that should not be reparented or affected by the window manager's
          * layout policy", whatever that means. something tells me i have never
@@ -234,24 +249,43 @@ int main(void)
                 width = MAX(11, attr.width + xdiff);
                 height = MAX(31, attr.height + ydiff);
                 /* find out which window is associated with this frame */
-                junkwin = *(Window *)XLookUpAssoc(dpy, windows, start.window);
+                children = (Window *)XLookUpAssoc(dpy, windows, start.window);
                 /* resize frame */
                 XResizeWindow(dpy, start.window, width, height);
                 /* resize window */
-                XResizeWindow(dpy, junkwin, width - 10, height - 30);
+                XResizeWindow(dpy, children[1], width - 10, height - 30);
             }
         } else if(ev.type == ButtonRelease) {
             /* stop receiving motion events */
             XUngrabPointer(dpy, CurrentTime);
-        /* a decorated window was destroyed, destroy the decoration too */
+        /* since we have asked for SubstructureNotify events for the root window
+         * and all our decorations, we have to do a little checking in those events.
+         * we can ignore any events on our decorations, since we're the ones who
+         * caused them in the first place.
+         */
+
+        /* a window was mapped */
+        } else if(ev.type == MapNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
+            /* we don't know this window yet, so it's a top-level window being
+             * mapped for the first time.
+             */
+            if(children == NULL) {
+                decorate(dpy, windows, ev.xmap.window);
+            }
+        /* a window was destroyed */
         } else if(ev.type == DestroyNotify) {
-            /* with DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask */
-            /* free the association data */
-            free(XLookUpAssoc(dpy, windows, ev.xdestroywindow.event));
-            /* remove the frame-to-window association */
-            XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
-            /* destroy the frame */
-            XDestroyWindow(dpy, ev.xdestroywindow.event);
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xdestroywindow.window);
+            /* it's a decorated window, destroy the decorations too */
+            if(children != NULL && ev.xdestroywindow.window == children[1]) {
+                /* remove the frame-to-window association */
+                XDeleteAssoc(dpy, windows, children[0]);
+                XDeleteAssoc(dpy, windows, children[1]);
+                /* destroy the frame */
+                XDestroyWindow(dpy, children[0]);
+                /* free the association data */
+                free(children);
+            }
         }
     }
     XDestroyAssocTable(windows);
