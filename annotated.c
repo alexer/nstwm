@@ -246,8 +246,11 @@ int main(void)
         /* a decorated window was destroyed, destroy the decoration too */
         } else if(ev.type == DestroyNotify) {
             /* with DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask */
+            /* free the association data */
             free(XLookUpAssoc(dpy, windows, ev.xdestroywindow.event));
+            /* remove the frame-to-window association */
             XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
+            /* destroy the frame */
             XDestroyWindow(dpy, ev.xdestroywindow.event);
         }
     }
