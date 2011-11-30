@@ -36,9 +36,10 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XReparentWindow(dpy, win, frame, 5, 25);
     XMapWindow(dpy, frame);
 
-    data = (Window *)malloc(2 * sizeof(Window));
+    data = (Window *)malloc(3 * sizeof(Window));
     data[0] = frame;
     data[1] = win;
+    data[2] = 1;
     XMakeAssoc(dpy, windows, frame, (char *)data);
     XMakeAssoc(dpy, windows, win, (char *)data);
 }
@@ -101,17 +102,25 @@ int main(void)
             }
         } else if(ev.type == ButtonRelease) {
             XUngrabPointer(dpy, CurrentTime);
+        } else if(ev.type == ReparentNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xreparent.window);
+            if(children != NULL && ev.xreparent.window == children[1]) {
+                children[2] = 0;
+            }
         } else if(ev.type == MapNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
             if(children == NULL) {
                 decorate(dpy, windows, ev.xmap.window);
-            } else if(ev.xmap.window == children[1]) {
-                XMapWindow(dpy, children[0]);
             }
         } else if(ev.type == UnmapNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xunmap.window);
-            if(children != NULL && ev.xunmap.window == children[1]) {
-                XUnmapWindow(dpy, children[0]);
+            if(children != NULL && ev.xunmap.window == children[1] && children[2] == 0) {
+                XReparentWindow(dpy, children[1], DefaultRootWindow(dpy), 0, 0);
+                XRemoveFromSaveSet(dpy, children[1]);
+                XDeleteAssoc(dpy, windows, children[0]);
+                XDeleteAssoc(dpy, windows, children[1]);
+                XDestroyWindow(dpy, children[0]);
+                free(children);
             }
         } else if(ev.type == DestroyNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xdestroywindow.window);

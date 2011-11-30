@@ -8,6 +8,7 @@ from Xlib import X, XK
 from util import *
 
 windows = {}
+reparenting = set()
 def decorate(win):
     attr = win.get_attributes()
     if attr.override_redirect or attr.map_state == X.IsUnmapped:
@@ -21,6 +22,7 @@ def decorate(win):
     win.reparent(frame, 5, 25)
     frame.map()
     windows[frame] = windows[win] = (frame, win)
+    reparenting.add(win)
 
 dpy = Display()
 scr = dpy.screen()
@@ -57,16 +59,22 @@ while 1:
             windows[start.window][1].configure(width = width - 10, height = height - 30)
     elif ev.type == X.ButtonRelease:
         dpy.ungrab_pointer(X.CurrentTime)
+    elif ev.type == X.ReparentNotify:
+        frame, win = windows.get(ev.window, (None, None))
+        if win in reparenting:
+            reparenting.remove(win)
     elif ev.type == X.MapNotify:
         frame, win = windows.get(ev.window, (None, None))
         if frame is None:
             decorate(ev.window)
-        elif ev.window == win:
-            frame.map()
     elif ev.type == X.UnmapNotify:
         frame, win = windows.get(ev.window, (None, None))
-        if ev.window == win:
-            frame.unmap()
+        if ev.window == win and win not in reparenting:
+            win.reparent(root, 0, 0)
+            win.change_save_set(X.SetModeDelete)
+            del windows[frame]
+            del windows[win]
+            frame.destroy()
     elif ev.type == X.DestroyNotify:
         frame, win = windows.get(ev.window, (None, None))
         if ev.window == win:

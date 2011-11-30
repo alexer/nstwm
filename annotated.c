@@ -76,9 +76,19 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
 
     /* keep track which frame contains which window */
     /* allocate and initialize association data */
-    data = (Window *)malloc(2 * sizeof(Window));
+    data = (Window *)malloc(3 * sizeof(Window));
     data[0] = frame;
     data[1] = win;
+    /* reparenting a window generates an UnmapNotify and a MapNotify for it.
+     * since we reparent during the creation of decorations, and we destroy
+     * the decorations in response to UnmapNotify events, which the
+     * reparenting generates, we'd better ignore the UnmapNotify generated
+     * by reparenting, if we want this to work...
+     * XXX: WHY does reparenting generate an UnmapNotify and a MapNotify,
+     * I have NO idea.
+     */
+    /* we use this to track when a reparenting for the window is in progress */
+    data[2] = 1;
     /* create associations */
     XMakeAssoc(dpy, windows, frame, (char *)data);
     XMakeAssoc(dpy, windows, win, (char *)data);
@@ -261,6 +271,13 @@ int main(void)
          * caused them in the first place.
          */
 
+        /* a window was reparented */
+        } else if(ev.type == ReparentNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xreparent.window);
+            /* it's a decorated window, stop ignoring unmaps for it */
+            if(children != NULL && ev.xreparent.window == children[1]) {
+                children[2] = 0;
+            }
         /* a window was mapped, decorate it or map the existing decorations */
         } else if(ev.type == MapNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
@@ -269,16 +286,29 @@ int main(void)
              */
             if(children == NULL) {
                 decorate(dpy, windows, ev.xmap.window);
-            /* it's a decorated window, map the decorations too */
-            } else if(ev.xmap.window == children[1]) {
-                XMapWindow(dpy, children[0]);
             }
         /* a window was unmapped */
         } else if(ev.type == UnmapNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xunmap.window);
-            /* it's a decorated window, unmap the decorations too */
-            if(children != NULL && ev.xunmap.window == children[1]) {
-                XUnmapWindow(dpy, children[0]);
+            /* it's a decorated window, and the unmap did not result from
+             * reparenting, destroy the decorations.
+             */
+            if(children != NULL && ev.xunmap.window == children[1] && children[2] == 0) {
+                /* reparent the window to the root so that it's not
+                 * destroyed when we destroy the frame.
+                 */
+                XReparentWindow(dpy, children[1], DefaultRootWindow(dpy), 0, 0);
+                /* remove the window from our save set so that it's not
+                 * automatically mapped if we die.
+                 */
+                XRemoveFromSaveSet(dpy, children[1]);
+                /* remove the frame-to-window association */
+                XDeleteAssoc(dpy, windows, children[0]);
+                XDeleteAssoc(dpy, windows, children[1]);
+                /* destroy the frame */
+                XDestroyWindow(dpy, children[0]);
+                /* free the association data */
+                free(children);
             }
         /* a window was destroyed */
         } else if(ev.type == DestroyNotify) {
