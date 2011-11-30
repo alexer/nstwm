@@ -13,6 +13,17 @@ from util import *
 
 windows = {}
 def decorate(win):
+    # Skip adding decorations to this window if it's override_redirect or unmapped.
+    # We ignore unmapped windows, since programs seem to use lots of windows that
+    # are never mapped during their lifetime. So why bother? Just decorate them
+    # if/when they're mapped.
+    # Apparently, override_redirect is meant for "temporary pop-up windows that
+    # should not be reparented or affected by the window manager's layout policy".
+    # For example, when menus are implemented as windows, they should probably
+    # have override_redirect set...
+    attr = win.get_attributes()
+    if attr.override_redirect or attr.map_state == X.IsUnmapped:
+        return
     # Normally windows are destroyed if their parent is destroyed.
     # Since we reparent windows to out decorations, they would normally be destroyed when the window manager dies.
     # Adding windows to our save-set prevents them being destroyed when we die.
@@ -52,19 +63,6 @@ root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
 
 # Add decorations to existing windows
 for win in root.query_tree().children:
-    attr = win.get_attributes()
-    # Skip adding decorations to this window if it's override_redirect or unmapped.
-    # We ignore unmapped windows, since programs seem to use lots of windows that
-    # are never mapped during their lifetime. So why bother? Just decorate them
-    # if/when they're mapped.
-    # XXX: Why windows with override_redirect are skipped, I have no idea. Every
-    # window manager seems to do it. Somebody please explain. :(
-    # Apparently, override_redirect is meant for "temporary pop-up windows that
-    # should not be reparented or affected by the window manager's layout policy",
-    # whatever that means. Something tells me I have never seen such a window, ever..
-    if attr.override_redirect or attr.map_state == X.IsUnmapped:
-        continue
-    # The window seems sane, add decorations to it
     decorate(win)
 
 while 1:

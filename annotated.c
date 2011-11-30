@@ -24,6 +24,21 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     Window frame;
     Window *data;
 
+    /* skip adding decorations to this window if it's override_redirect
+     * or unmapped.
+     * we ignore unmapped windows, since programs seem to use lots of
+     * windows that are never mapped during their lifetime. so why bother?
+     * just decorate them if/when they're mapped.
+     * apparently, override_redirect is meant for "temporary pop-up windows
+     * that should not be reparented or affected by the window manager's
+     * layout policy". for example, when menus are implemented as windows,
+     * they should probably have override_redirect set...
+     */
+    XGetWindowAttributes(dpy, win, &attr);
+    if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
+        return;
+    }
+
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
     values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
@@ -41,7 +56,6 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
      * they can actually be used for something..
      */
     XSetWindowBorderWidth(dpy, win, 0);
-    XGetWindowAttributes(dpy, win, &attr);
     /* create the window, 5px borders plus a 20px bar at the top. setting the
      * background pixel means we don't have to do any drawing and stuff ourselves.
      * we set ButtonPressMask in the event mask for the window so that we get clicks only from the
@@ -141,23 +155,6 @@ int main(void)
     /* get all children of the root window */
     XQueryTree(dpy, DefaultRootWindow(dpy), &junkwin, &junkwin, &children, &num_children);
     for(i = 0; i < num_children; i++) {
-        /* skip adding decorations to this window if it's override_redirect
-         * or unmapped.
-         * We ignore unmapped windows, since programs seem to use lots of
-         * windows that are never mapped during their lifetime. So why bother?
-         * Just decorate them if/when they're mapped.
-         * XXX: why windows with override_redirect are skipped, I have no idea.
-         * every window manager seems to do it. somebody please explain. :(
-         * apparently, override_redirect is meant for "temporary pop-up windows
-         * that should not be reparented or affected by the window manager's
-         * layout policy", whatever that means. something tells me i have never
-         * seen such a window, ever..
-         */
-        XGetWindowAttributes(dpy, children[i], &attr);
-        if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
-            continue;
-        }
-        /* the window seems sane, add decorations to it */
         decorate(dpy, windows, children[i]);
     }
     XFree(children);

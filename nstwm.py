@@ -9,6 +9,9 @@ from util import *
 
 windows = {}
 def decorate(win):
+    attr = win.get_attributes()
+    if attr.override_redirect or attr.map_state == X.IsUnmapped:
+        return
     win.change_save_set(X.SetModeInsert)
     win.configure(border_width = 0)
     geom = win.get_geometry()
@@ -28,9 +31,6 @@ root.grab_key(dpy.keysym_to_keycode(XK.string_to_keysym("F1")),
     X.Mod1Mask, 1, X.GrabModeAsync, X.GrabModeAsync)
 
 for win in root.query_tree().children:
-    attr = win.get_attributes()
-    if attr.override_redirect or attr.map_state == X.IsUnmapped:
-        continue
     decorate(win)
 
 while 1:

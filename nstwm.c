@@ -17,6 +17,11 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     Window frame;
     Window *data;
 
+    XGetWindowAttributes(dpy, win, &attr);
+    if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
+        return;
+    }
+
     values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
     values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
@@ -25,7 +30,6 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
 
     XAddToSaveSet(dpy, win);
     XSetWindowBorderWidth(dpy, win, 0);
-    XGetWindowAttributes(dpy, win, &attr);
     frame = XCreateWindow(dpy, DefaultRootWindow(dpy), attr.x - 5, attr.y - 25, attr.width + 10, attr.height + 30,
         0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
@@ -66,10 +70,6 @@ int main(void)
 
     XQueryTree(dpy, DefaultRootWindow(dpy), &junkwin, &junkwin, &children, &num_children);
     for(i = 0; i < num_children; i++) {
-        XGetWindowAttributes(dpy, children[i], &attr);
-        if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
-            continue;
-        }
         decorate(dpy, windows, children[i]);
     }
     XFree(children);
