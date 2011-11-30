@@ -96,6 +96,7 @@ int main(void)
         } else if(ev.type == ButtonRelease) {
             XUngrabPointer(dpy, CurrentTime);
         } else if(ev.type == DestroyNotify) {
+            free(XLookUpAssoc(dpy, windows, ev.xdestroywindow.event));
             XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
             XDestroyWindow(dpy, ev.xdestroywindow.event);
         }

@@ -246,6 +246,7 @@ int main(void)
         /* a decorated window was destroyed, destroy the decoration too */
         } else if(ev.type == DestroyNotify) {
             /* with DestroyNotify, ev.event is the parent, since we used SubstructureNotifyMask */
+            free(XLookUpAssoc(dpy, windows, ev.xdestroywindow.event));
             XDeleteAssoc(dpy, windows, ev.xdestroywindow.event);
             XDestroyWindow(dpy, ev.xdestroywindow.event);
         }
