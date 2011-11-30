@@ -130,13 +130,22 @@ while 1:
     # We can ignore any events on our decorations, since we're the ones who caused
     # them in the first place.
 
-    # A window was mapped
+    # A window was mapped, decorate it or map the existing decorations
     elif ev.type == X.MapNotify:
         frame, win = windows.get(ev.window, (None, None))
         # We don't know this window yet, so it's a top-level window being mapped
         # for the first time.
         if frame is None:
             decorate(ev.window)
+        # It's a decorated window, map the decorations too
+        elif ev.window == win:
+            frame.map()
+    # A window was unmapped
+    elif ev.type == X.UnmapNotify:
+        frame, win = windows.get(ev.window, (None, None))
+        # It's a decorated window, unmap the decorations too
+        if ev.window == win:
+            frame.unmap()
     # A window was destroyed
     elif ev.type == X.DestroyNotify:
         frame, win = windows.get(ev.window, (None, None))

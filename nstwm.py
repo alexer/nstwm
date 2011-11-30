@@ -61,6 +61,12 @@ while 1:
         frame, win = windows.get(ev.window, (None, None))
         if frame is None:
             decorate(ev.window)
+        elif ev.window == win:
+            frame.map()
+    elif ev.type == X.UnmapNotify:
+        frame, win = windows.get(ev.window, (None, None))
+        if ev.window == win:
+            frame.unmap()
     elif ev.type == X.DestroyNotify:
         frame, win = windows.get(ev.window, (None, None))
         if ev.window == win:

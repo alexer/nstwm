@@ -105,6 +105,13 @@ int main(void)
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
             if(children == NULL) {
                 decorate(dpy, windows, ev.xmap.window);
+            } else if(ev.xmap.window == children[1]) {
+                XMapWindow(dpy, children[0]);
+            }
+        } else if(ev.type == UnmapNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xunmap.window);
+            if(children != NULL && ev.xunmap.window == children[1]) {
+                XUnmapWindow(dpy, children[0]);
             }
         } else if(ev.type == DestroyNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xdestroywindow.window);

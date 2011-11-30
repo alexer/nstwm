@@ -264,7 +264,7 @@ int main(void)
          * caused them in the first place.
          */
 
-        /* a window was mapped */
+        /* a window was mapped, decorate it or map the existing decorations */
         } else if(ev.type == MapNotify) {
             children = (Window *)XLookUpAssoc(dpy, windows, ev.xmap.window);
             /* we don't know this window yet, so it's a top-level window being
@@ -272,6 +272,16 @@ int main(void)
              */
             if(children == NULL) {
                 decorate(dpy, windows, ev.xmap.window);
+            /* it's a decorated window, map the decorations too */
+            } else if(ev.xmap.window == children[1]) {
+                XMapWindow(dpy, children[0]);
+            }
+        /* a window was unmapped */
+        } else if(ev.type == UnmapNotify) {
+            children = (Window *)XLookUpAssoc(dpy, windows, ev.xunmap.window);
+            /* it's a decorated window, unmap the decorations too */
+            if(children != NULL && ev.xunmap.window == children[1]) {
+                XUnmapWindow(dpy, children[0]);
             }
         /* a window was destroyed */
         } else if(ev.type == DestroyNotify) {
