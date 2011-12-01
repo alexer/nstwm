@@ -16,8 +16,11 @@ def decorate(win):
     win.change_save_set(X.SetModeInsert)
     win.configure(border_width = 0)
     geom = win.get_geometry()
+    depth = 32
+    visual = match_visual_info(scr, depth, X.TrueColor).visual_id
+    colormap = root.create_colormap(visual, X.AllocNone)
     frame = root.create_window(max(0, geom.x - 5), max(0, geom.y - 25), geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
+        0, depth, X.CopyFromParent, visual, colormap = colormap, background_pixel = 0xffffffff, border_pixel = 0, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
     frame.configure(sibling = win, stack_mode = X.Above)
     win.reparent(frame, 5, 25)
     frame.map()

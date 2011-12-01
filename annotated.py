@@ -34,14 +34,19 @@ def decorate(win):
     win.configure(border_width = 0)
     # Get window geometry so that we know how big to make the decorations
     geom = win.get_geometry()
+    # Find a visual and a colormap having an alpha channel (XXX: or something like that)
+    depth = 32
+    visual = match_visual_info(scr, depth, X.TrueColor).visual_id
+    colormap = root.create_colormap(visual, X.AllocNone)
     # Create the window, 5px borders plus a 20px bar at the top and make sure it's visible.
     # Setting the background pixel means we don't have to do any drawing and stuff ourselves.
+    # Our pixels are replaced by the ones of our children, so if the window has transparency, it'll work.
     # We set ButtonPressMask in the event mask for the window so that we get clicks only from the frame,
     # clicks to the window still go to the application as they're supposed to.
     # We set SubstructureNotifyMask so that we're notified when the contained window is destroyed,
     # so that we know when to clean up.
     frame = root.create_window(max(0, geom.x - 5), max(0, geom.y - 25), geom.width + 10, geom.height + 30,
-        0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
+        0, depth, X.CopyFromParent, visual, colormap = colormap, background_pixel = 0xffffffff, border_pixel = 0, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
     # Make sure window is over the frame. XXX: Is this really needed?
     frame.configure(sibling = win, stack_mode = X.Above)
     # Reparent the window to our decorations, take borders and top bar into account for the position.

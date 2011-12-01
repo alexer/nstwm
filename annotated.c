@@ -11,6 +11,7 @@
  * headers, like Xmd.h, keysym.h, etc.
  */
 #include <X11/Xlib.h>
+#include <X11/Xutil.h> /* For XVisualInfo */
 #include "util.h"
 #include <stdlib.h>
 
@@ -23,6 +24,8 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XWindowChanges changes;
     Window frame;
     Window *data;
+    XVisualInfo visual;
+    int depth;
 
     /* skip adding decorations to this window if it's override_redirect
      * or unmapped.
@@ -39,7 +42,13 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
         return;
     }
 
-    values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
+    /* Find a visual and a colormap having an alpha channel (XXX: or something like that) */
+    depth = 32;
+    XMatchVisualInfo(dpy, DefaultScreen(dpy), depth, TrueColor, &visual);
+
+    values.colormap = XCreateColormap(dpy, DefaultRootWindow(dpy), visual.visual, AllocNone);
+    values.background_pixel = 0xffffffff;
+    values.border_pixel = 0;
     values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
     changes.sibling = win;
@@ -58,13 +67,14 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XSetWindowBorderWidth(dpy, win, 0);
     /* create the window, 5px borders plus a 20px bar at the top, and make sure it's visible.
      * setting the background pixel means we don't have to do any drawing and stuff ourselves.
+     * our pixels are replaced by the ones of our children, so if the window has transparency, it'll work.
      * we set ButtonPressMask in the event mask for the window so that we get clicks only from the
      * frame, clicks to the window still go to the application as they're supposed to.
      * we set SubstructureNotifyMask so that we're notified when the contained
      * window is destroyed, so that we know when to clean up.
      */
     frame = XCreateWindow(dpy, DefaultRootWindow(dpy), MAX(0, attr.x - 5), MAX(0, attr.y - 25), attr.width + 10, attr.height + 30,
-        0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
+        0, depth, CopyFromParent, visual.visual, CWColormap|CWBackPixel|CWBorderPixel|CWEventMask, &values);
     /* make sure window is over the frame. XXX: is this really needed? */
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
     /* reparent the window to our decorations, take borders and top bar into

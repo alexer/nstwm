@@ -30,6 +30,7 @@ Features:
 
   Focus follows pointer.
   Decorations.
+  Supports assisted transparency (e.g. with xcompmgr)
   Button1, drag (on decorations): interactive window move
   Button3, drag (on decorations): interactive window resize
   Alt+F1: raise focused window

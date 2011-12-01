@@ -4,6 +4,7 @@
  * This software is in the public domain and is provided AS IS, with NO WARRANTY. */
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include "util.h"
 #include <stdlib.h>
 
@@ -16,13 +17,20 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XWindowChanges changes;
     Window frame;
     Window *data;
+    XVisualInfo visual;
+    int depth;
 
     XGetWindowAttributes(dpy, win, &attr);
     if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
         return;
     }
 
-    values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
+    depth = 32;
+    XMatchVisualInfo(dpy, DefaultScreen(dpy), depth, TrueColor, &visual);
+
+    values.colormap = XCreateColormap(dpy, DefaultRootWindow(dpy), visual.visual, AllocNone);
+    values.background_pixel = 0xffffffff;
+    values.border_pixel = 0;
     values.event_mask = ButtonPressMask|SubstructureNotifyMask;
 
     changes.sibling = win;
@@ -31,7 +39,7 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
     XAddToSaveSet(dpy, win);
     XSetWindowBorderWidth(dpy, win, 0);
     frame = XCreateWindow(dpy, DefaultRootWindow(dpy), MAX(0, attr.x - 5), MAX(0, attr.y - 25), attr.width + 10, attr.height + 30,
-        0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
+        0, depth, CopyFromParent, visual.visual, CWColormap|CWBackPixel|CWBorderPixel|CWEventMask, &values);
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
     XReparentWindow(dpy, win, frame, 5, 25);
     XMapWindow(dpy, frame);
