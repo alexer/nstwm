@@ -5,6 +5,7 @@
 
 from Xlib.display import Display
 from Xlib import X, XK
+from util import *
 
 dpy = Display()
 root = dpy.screen().root
@@ -27,6 +28,7 @@ while 1:
         attr = ev.child.get_geometry()
         start = ev
     elif ev.type == X.MotionNotify and start:
+        ev = compress_motion(dpy, ev)
         xdiff = ev.root_x - start.root_x
         ydiff = ev.root_y - start.root_y
         if start.detail == 1:

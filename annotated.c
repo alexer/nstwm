@@ -25,6 +25,7 @@ int main(void)
     XButtonEvent start;
 
     XEvent ev;
+    int xdiff, ydiff;
 
     /* return failure status if we can't connect */
     if(!(dpy = XOpenDisplay(0x0))) {
@@ -110,9 +111,7 @@ int main(void)
         /* we only get motion events when a button is being pressed,
          * but we still have to check that the drag started on a window */
         } else if(ev.type == MotionNotify && start.subwindow != None) {
-            /* here we could "compress" motion notify events by doing:
-             *
-             * while(XCheckTypedEvent(dpy, MotionNotify, &ev));
+            /* here we "compress" motion notify events.
              *
              * if there are 10 of them waiting, it makes no sense to look at
              * any of them but the most recent.  in some cases -- if the window
@@ -125,7 +124,12 @@ int main(void)
              * also be useful to compress EnterNotify events, so that you don't
              * get "focus flicker" as windows shuffle around underneath the
              * pointer.
+             *
+             * TODO: i think in theory we should stop if we see any button
+             * events, since currently we can process them out of order.
+             * i doubt it makes any difference in practice, however.
              */
+            while(XCheckTypedEvent(dpy, MotionNotify, &ev));
 
             /* now we use the stuff we saved at the beginning of the
              * move/resize and compare it to the pointer's current position to
@@ -143,8 +147,8 @@ int main(void)
              * exactly zero, triggering an X error.  so we specify a minimum
              * width/height of 1 pixel.
              */
-            int xdiff = ev.xbutton.x_root - start.x_root;
-            int ydiff = ev.xbutton.y_root - start.y_root;
+            xdiff = ev.xbutton.x_root - start.x_root;
+            ydiff = ev.xbutton.y_root - start.y_root;
             if(start.button == 1) {
                 XMoveWindow(dpy, start.subwindow,
                     attr.x + xdiff,

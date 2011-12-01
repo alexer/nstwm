@@ -9,6 +9,7 @@
 
 from Xlib.display import Display
 from Xlib import X, XK
+from util import *
 
 dpy = Display()
 root = dpy.screen().root
@@ -51,6 +52,13 @@ while 1:
     # We have to check that start is not empty to make sure we've started
     # dragging on a real window, since we get events from the root window too.
     elif ev.type == X.MotionNotify and start:
+        # Compress motion notify events, since it doesn't make any sense to
+        # look at anything besides the most recent one. This speeds up resizing
+        # considerably.
+        # TODO: I think in theory we should stop if we see any button events,
+        # since doing it like this can process them out of order. I doubt it
+        # makes any difference in practice, however.
+        ev = compress_motion(dpy, ev)
         # See how the pointer has moved relative to the root window.
         xdiff = ev.root_x - start.root_x
         ydiff = ev.root_y - start.root_y

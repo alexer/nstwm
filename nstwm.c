@@ -13,6 +13,7 @@ int main(void)
     XWindowAttributes attr;
     XButtonEvent start;
     XEvent ev;
+    int xdiff, ydiff;
 
     if(!(dpy = XOpenDisplay(0x0))) {
         return 1;
@@ -34,8 +35,9 @@ int main(void)
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
         } else if(ev.type == MotionNotify && start.subwindow != None) {
-            int xdiff = ev.xbutton.x_root - start.x_root;
-            int ydiff = ev.xbutton.y_root - start.y_root;
+            while(XCheckTypedEvent(dpy, MotionNotify, &ev));
+            xdiff = ev.xbutton.x_root - start.x_root;
+            ydiff = ev.xbutton.y_root - start.y_root;
             if(start.button == 1) {
                 XMoveWindow(dpy, start.subwindow,
                     attr.x + xdiff,
