@@ -1,22 +1,32 @@
-TinyWM is written by Nick Welch <nick@incise.org> in 2005 & 2011.
+NotSoTinyWM is written by Aleksi Torhamo <aleksi@torhamo.net>.
+It is based on TinyWM, which is written by Nick Welch <nick@incise.org>.
 
 This software is in the public domain and is provided AS IS, with NO WARRANTY.
 
-TinyWM is a ridiculously tiny window manager implemented in nearly as few lines
-of C as possible, without being obfuscated or entirely useless. It allows you
-to move, resize, focus (sloppy), and raise windows -- that's it!  TinyWM's main
-purpose is to serve as a quick example of some window manager programming
-basics.
+NotSoTinyWM is a small window manager that tries to do the bare minimum to
+get the job done. It has a base that is (nearly) identical to TinyWM,
+which allows you to move, resize, and raise windows. It has the default
+sloppy focus and no decorations or anything like that, which means moving
+and resizing windows has to be done with weird key combinations.
+
+Various features are built on top of the base, and they coexist with it. Every
+feature is built on top of the bare minimum which can support it, so you can
+see how to implement specific features. Decorations are implemented on top of
+the base, and transparent decorations on top of the decorations. That is, the
+original features aren't replaced by the "improved" ones.
+
+NotSoTinyWM's idea is to show how to implement various features in a window
+manager, with as little distractions as possible.
 
 Files:
 
-  Makefile: highly advanced build system
-  tinywm.c: the code
+  Makefile: for building nstwm.c
+  nstwm.c: the c version of the code
   annotated.c: same, but with tons of rambling comments about everything
-  tinywm.py: a python version (requires CVS python-xlib due to a bug)
-  annotated.py: the python version with light comments
+  nstwm.py: the python version of the code
+  annotated.py: same, but with light comments
 
-Usage:
+Features:
 
   Focus follows pointer.
   Alt+Button1, drag: interactive window move
@@ -24,16 +34,12 @@ Usage:
   Alt+F1: raise focused window
 
 Misc:
-  
-  Another very small window manager is failsafewm.  Originally I started
-  hacking on it, as there was quite a bit of stuff in it that I thought was
-  unneeded.  I wound up rewriting it from scratch, with just the bare
-  necessities, and that became TinyWM.
 
-    http://freshmeat.net/projects/failsafewm/
+  The homepage for NotSoTinyWM is at:
 
-  Yet another small -- but in comparison to TinyWM, big -- window manager is
-  aewm.  It's a good example for learning about writing a window manager.
+    http://alexer.net/nstwm
 
-      http://www.red-bean.com/~decklin/aewm/
+  The homepage for TinyWM is at:
+
+    http://incise.org/tinywm.html
 

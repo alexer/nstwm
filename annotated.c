@@ -1,18 +1,10 @@
-/* TinyWM is written by Nick Welch <nick@incise.org> in 2005 & 2011.
+/* NotSoTinyWM is written by Aleksi Torhamo <aleksi@torhamo.net>.
+ * It is based on TinyWM, which is written by Nick Welch <nick@incise.org>.
  *
- * This software is in the public domain
- * and is provided AS IS, with NO WARRANTY. */
+ * This software is in the public domain and is provided AS IS, with NO WARRANTY. */
 
-/* much of tinywm's purpose is to serve as a very basic example of how to do X
- * stuff and/or understand window managers, so i wanted to put comments in the
- * code explaining things, but i really hate wading through code that is
- * over-commented -- and for that matter, tinywm is supposed to be as concise
- * as possible, so having lots of comments just wasn't really fitting for it.
- * i want tinywm.c to be something you can just look at and go "wow, that's
- * it?  cool!"  so what i did was just copy it over to annotated.c and comment
- * the hell out of it.  ahh, but now i have to make every code change twice!
- * oh well.  i could always use some sort of script to process the comments out
- * of this and write it to tinywm.c ... nah.
+/* this is a commented version of nstwm.c, since uncommented code is much
+ * easier to edit (when you're familiar with the code).
  */
 
 /* most X stuff will be included with Xlib.h, but a few things require other

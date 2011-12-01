@@ -1,9 +1,9 @@
-# TinyWM is written by Nick Welch <nick@incise.org> in 2005 & 2011.
+# NotSoTinyWM is written by Aleksi Torhamo <aleksi@torhamo.net>.
+# It is based on TinyWM, which is written by Nick Welch <nick@incise.org>.
 #
-# This software is in the public domain
-# and is provided AS IS, with NO WARRANTY.
+# This software is in the public domain and is provided AS IS, with NO WARRANTY.
 
-# This is a lightly (in comparison to annotated.c) commented version of tinywm.py.
+# This is a lightly (in comparison to annotated.c) commented version of nstwm.py.
 # For more in-depth explanations, refer to annotated.c.
 # Why make code changes once, when you could make them two.. I mean four times instead!
 

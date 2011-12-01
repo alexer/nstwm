@@ -1,7 +1,7 @@
-/* TinyWM is written by Nick Welch <nick@incise.org> in 2005 & 2011.
+/* NotSoTinyWM is written by Aleksi Torhamo <aleksi@torhamo.net>.
+ * It is based on TinyWM, which is written by Nick Welch <nick@incise.org>.
  *
- * This software is in the public domain
- * and is provided AS IS, with NO WARRANTY. */
+ * This software is in the public domain and is provided AS IS, with NO WARRANTY. */
 
 #include <X11/Xlib.h>
 
