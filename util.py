@@ -30,3 +30,17 @@ def compress_motion(dpy, default = None):
     # Return the latest event, or a default value if we didn't get any events
     return motion_events[-1] if motion_events else default
 
+def match_visual_info(screen, depth, visual_class):
+    """Returns the visual information for a visual that matches the
+    specified depth and class for a screen.
+
+    Does the same thing as the C Xlib function XMatchVisualInfo().
+    """
+    for depth_info in screen.allowed_depths:
+        if depth_info.depth != depth:
+            continue
+        for visual_info in depth_info.visuals:
+            if visual_info.visual_class != visual_class:
+                continue
+            return visual_info
+
