@@ -30,7 +30,7 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
 
     XAddToSaveSet(dpy, win);
     XSetWindowBorderWidth(dpy, win, 0);
-    frame = XCreateWindow(dpy, DefaultRootWindow(dpy), attr.x - 5, attr.y - 25, attr.width + 10, attr.height + 30,
+    frame = XCreateWindow(dpy, DefaultRootWindow(dpy), MAX(0, attr.x - 5), MAX(0, attr.y - 25), attr.width + 10, attr.height + 30,
         0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
     XReparentWindow(dpy, win, frame, 5, 25);

@@ -34,13 +34,13 @@ def decorate(win):
     win.configure(border_width = 0)
     # Get window geometry so that we know how big to make the decorations
     geom = win.get_geometry()
-    # Create the window, 5px borders plus a 20px bar at the top.
+    # Create the window, 5px borders plus a 20px bar at the top and make sure it's visible.
     # Setting the background pixel means we don't have to do any drawing and stuff ourselves.
     # We set ButtonPressMask in the event mask for the window so that we get clicks only from the frame,
     # clicks to the window still go to the application as they're supposed to.
     # We set SubstructureNotifyMask so that we're notified when the contained window is destroyed,
     # so that we know when to clean up.
-    frame = root.create_window(geom.x - 5, geom.y - 25, geom.width + 10, geom.height + 30,
+    frame = root.create_window(max(0, geom.x - 5), max(0, geom.y - 25), geom.width + 10, geom.height + 30,
         0, scr.root_depth, X.CopyFromParent, scr.root_visual, background_pixel = scr.white_pixel, event_mask = X.ButtonPressMask|X.SubstructureNotifyMask)
     # Make sure window is over the frame. XXX: Is this really needed?
     frame.configure(sibling = win, stack_mode = X.Above)

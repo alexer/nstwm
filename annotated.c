@@ -56,14 +56,14 @@ void decorate(Display *dpy, XAssocTable *windows, Window win)
      * they can actually be used for something..
      */
     XSetWindowBorderWidth(dpy, win, 0);
-    /* create the window, 5px borders plus a 20px bar at the top. setting the
-     * background pixel means we don't have to do any drawing and stuff ourselves.
+    /* create the window, 5px borders plus a 20px bar at the top, and make sure it's visible.
+     * setting the background pixel means we don't have to do any drawing and stuff ourselves.
      * we set ButtonPressMask in the event mask for the window so that we get clicks only from the
      * frame, clicks to the window still go to the application as they're supposed to.
      * we set SubstructureNotifyMask so that we're notified when the contained
      * window is destroyed, so that we know when to clean up.
      */
-    frame = XCreateWindow(dpy, DefaultRootWindow(dpy), attr.x - 5, attr.y - 25, attr.width + 10, attr.height + 30,
+    frame = XCreateWindow(dpy, DefaultRootWindow(dpy), MAX(0, attr.x - 5), MAX(0, attr.y - 25), attr.width + 10, attr.height + 30,
         0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
     /* make sure window is over the frame. XXX: is this really needed? */
     XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
