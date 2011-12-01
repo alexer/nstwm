@@ -14,6 +14,48 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
+void decorate(Display *dpy, Window win)
+{
+    XWindowAttributes attr;
+    XSetWindowAttributes values;
+    XWindowChanges changes;
+    Window frame;
+
+    values.background_pixel = WhitePixel(dpy, DefaultScreen(dpy));
+    values.event_mask = ButtonPressMask|ButtonReleaseMask;
+
+    changes.sibling = win;
+    changes.stack_mode = Above;
+
+    /* normally windows are destroyed if their parent is destroyed. since we
+     * reparent windows to out decorations, they would normally be destroyed
+     * when the window manager dies. adding windows to our save-set prevents
+     * them being destroyed when we die.
+     */
+    XAddToSaveSet(dpy, win);
+    /* remove any borders the window might have, since it's gonna get decorations now..
+     * XXX: I don't know if the X11 borders are purely a visual thing, of if
+     * they can actually be used for something..
+     */
+    XSetWindowBorderWidth(dpy, win, 0);
+    XGetWindowAttributes(dpy, win, &attr);
+    /* create the window, 5px borders plus a 20px bar at the top. setting the
+     * background pixel means we don't have to do any drawing and stuff ourselves.
+     * we set the event mask for the window so that we get clicks only from the
+     * frame, clicks to the window still go to the application as they're supposed to.
+     */
+    frame = XCreateWindow(dpy, DefaultRootWindow(dpy), attr.x - 5, attr.y - 25, attr.width + 10, attr.height + 30,
+        0, CopyFromParent, CopyFromParent, CopyFromParent, CWBackPixel|CWEventMask, &values);
+    /* make sure window is over the frame. XXX: is this really needed? */
+    XConfigureWindow(dpy, frame, CWSibling|CWStackMode, &changes);
+    /* reparent the window to our decorations, take borders and top bar into
+     * account for the position.
+     */
+    XReparentWindow(dpy, win, frame, 5, 25);
+    /* make our frame (and the window) visible. */
+    XMapWindow(dpy, frame);
+}
+
 int main(void)
 {
     Display * dpy;
@@ -26,6 +68,9 @@ int main(void)
 
     XEvent ev;
     int xdiff, ydiff;
+    Window junkwin;
+    Window *children;
+    unsigned int num_children, i;
 
     /* return failure status if we can't connect */
     if(!(dpy = XOpenDisplay(0x0))) {
@@ -65,20 +110,29 @@ int main(void)
     XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("F1")), Mod1Mask,
         DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 
-    /* XGrabKey and XGrabButton are basically ways of saying "when this
-     * combination of modifiers and key/button is pressed, send me the events."
-     * so we can safely assume that we'll receive Alt+F1 events, Alt+Button1
-     * events, and Alt+Button3 events, but no others.  You can either do
-     * individual grabs like these for key/mouse combinations, or you can use
-     * XSelectInput with KeyPressMask/ButtonPressMask/etc to catch all events
-     * of those types and filter them as you receive them.
-     */
-    XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True,
-        ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True,
-        ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    /* in the next loop, we add decorations to existing windows */
 
-    start.subwindow = None;
+    /* get all children of the root window */
+    XQueryTree(dpy, DefaultRootWindow(dpy), &junkwin, &junkwin, &children, &num_children);
+    for(i = 0; i < num_children; i++) {
+        /* skip adding decorations to this window if it's override_redirect
+         * or unmapped.
+         * XXX: why these two conditions, i have no idea. every window manager
+         * seems to use something along these lines. somebodyplease explain. :(
+         * apparently, override_redirect is meant for "temporary pop-up windows
+         * that should not be reparented or affected by the window manager's
+         * layout policy", whatever that means. something tells me i have never
+         * seen such a window, ever..
+         */
+        XGetWindowAttributes(dpy, children[i], &attr);
+        if(attr.override_redirect == True || attr.map_state == IsUnmapped) {
+            continue;
+        }
+        /* the window seems sane, add decorations to it */
+        decorate(dpy, children[i]);
+    }
+    XFree(children);
+
     for(;;) {
         /* this is the most basic way of looping through X events; you can be
          * more flexible by using XPending(), or ConnectionNumber() along with
@@ -100,17 +154,20 @@ int main(void)
          */
         if(ev.type == KeyPress && ev.xkey.subwindow != None) {
             XRaiseWindow(dpy, ev.xkey.subwindow);
-        } else if(ev.type == ButtonPress && ev.xbutton.subwindow != None) {
+        } else if(ev.type == ButtonPress) {
+            /* ask for motion events so we can track the drag */
+            XGrabPointer(dpy, ev.xbutton.window, 1, PointerMotionMask,
+                GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
             /* we "remember" the position of the pointer at the beginning of
              * our move/resize, and the size/position of the window.  that way,
              * when the pointer moves, we can compare it to our initial data
              * and move/resize accordingly.
              */
-            XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+            XGetWindowAttributes(dpy, ev.xbutton.window, &attr);
             start = ev.xbutton;
         /* we only get motion events when a button is being pressed,
          * but we still have to check that the drag started on a window */
-        } else if(ev.type == MotionNotify && start.subwindow != None) {
+        } else if(ev.type == MotionNotify) {
             /* here we "compress" motion notify events.
              *
              * if there are 10 of them waiting, it makes no sense to look at
@@ -150,18 +207,19 @@ int main(void)
             xdiff = ev.xbutton.x_root - start.x_root;
             ydiff = ev.xbutton.y_root - start.y_root;
             if(start.button == 1) {
-                XMoveWindow(dpy, start.subwindow,
+                XMoveWindow(dpy, start.window,
                     attr.x + xdiff,
                     attr.y + ydiff
                 );
             } else if(start.button == 3) {
-                XResizeWindow(dpy, start.subwindow,
+                XResizeWindow(dpy, start.window,
                     MAX(1, attr.width + xdiff),
                     MAX(1, attr.height + ydiff)
                 );
             }
         } else if(ev.type == ButtonRelease) {
-            start.subwindow = None;
+            /* stop receiving motion events */
+            XUngrabPointer(dpy, CurrentTime);
         }
     }
 }

@@ -29,8 +29,9 @@ Files:
 Features:
 
   Focus follows pointer.
-  Alt+Button1, drag: interactive window move
-  Alt+Button3, drag: interactive window resize
+  Decorations.
+  Button1, drag (on decorations): interactive window move
+  Button3, drag (on decorations): interactive window resize
   Alt+F1: raise focused window
 
 Misc:
